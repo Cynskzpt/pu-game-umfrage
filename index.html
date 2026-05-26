@@ -321,6 +321,47 @@
       display: block;
     }
 
+    .activation-box {
+      display: none;
+      text-align: center;
+      padding: 2rem 1.25rem;
+      animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .activation-box.show {
+      display: block;
+    }
+
+    .activation-box h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .activation-box p {
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 1rem;
+    }
+
+    .activation-box a.btn-link {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      color: #0a0a0f;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .activation-box ul {
+      text-align: left;
+      color: var(--muted);
+      margin: 1rem auto 0;
+      max-width: 22rem;
+      line-height: 1.6;
+    }
+
     /* Thank you screen */
     .thanks {
       display: none;
@@ -388,6 +429,23 @@
       <span class="icon">✨</span>
       <h2>Danke, Legend!</h2>
       <p>Dein Feedback ist safe bei mir angekommen. Appreciate you fr.</p>
+    </div>
+
+    <div id="activation" class="activation-box" aria-live="polite">
+      <span class="icon" style="font-size:3rem;display:block;margin-bottom:0.5rem">📬</span>
+      <h2>Fast fertig — E-Mail bestätigen</h2>
+      <p>FormSubmit hat dir eine <strong>Aktivierungs-Mail</strong> geschickt (Absender oft „FormSubmit“).</p>
+      <ul>
+        <li>Outlook → <strong>Junk/Spam</strong> prüfen</li>
+        <li>Suche nach <strong>„Activate“</strong> oder <strong>„FormSubmit“</strong></li>
+        <li>Link in der Mail <strong>einmal anklicken</strong></li>
+      </ul>
+      <p>Keine Mail? Nochmal anfordern:</p>
+      <a class="btn-link" href="aktivieren.html">Aktivierungs-Mail erneut senden</a>
+      <p style="margin-top:1.25rem;font-size:0.9rem">
+        Dauerhaft zuverlässiger:
+        <a href="einrichten.html" style="color:var(--cyan)">Web3Forms einrichten</a>
+      </p>
     </div>
 
     <form id="survey" novalidate>
@@ -468,6 +526,11 @@
     const submitBtn = document.getElementById("submit-btn");
     const sendError = document.getElementById("send-error");
 
+    const hasWeb3Key =
+      typeof SURVEY_CONFIG !== "undefined" &&
+      SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY &&
+      SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY.length > 10;
+
     const emailMissing =
       typeof SURVEY_CONFIG === "undefined" ||
       !SURVEY_CONFIG.EMAIL ||
@@ -475,6 +538,10 @@
 
     if (emailMissing) {
       document.getElementById("setup-banner").hidden = false;
+    }
+
+    function isSuccess(data) {
+      return data && (data.success === true || data.success === "true");
     }
 
     function showError(id, show) {
@@ -527,29 +594,78 @@
       sendError.classList.remove("show");
 
       try {
-        const res = await fetch(
-          "https://formsubmit.co/ajax/" + encodeURIComponent(SURVEY_CONFIG.EMAIL),
-          {
+        let data;
+
+        if (hasWeb3Key) {
+          const body = new FormData();
+          body.append("access_key", SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY);
+          body.append("subject", "Neue Game-Umfrage · PU Projekt");
+          body.append("from_name", "PU Umfrage");
+          body.append("name", name);
+          body.append("Lieblingsspiel", favoriteLabel);
+          body.append("Unlieblingsspiel", leastLabel);
+          body.append("Feedback", feedback);
+          body.append("Verbesserungen", improve);
+          body.append("Zeitpunkt", timestamp);
+          body.append(
+            "message",
+            [
+              "Name: " + name,
+              "Lieblingsspiel: " + favoriteLabel,
+              "Unlieblingsspiel: " + leastLabel,
+              "",
+              "Feedback: " + feedback,
+              "",
+              "Verbesserungen: " + improve,
+              "",
+              "Zeit: " + timestamp,
+            ].join("\n")
+          );
+
+          const res = await fetch("https://api.web3forms.com/submit", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({
-              _subject: "Neue Game-Umfrage · PU Projekt",
-              _template: "table",
-              Name: name,
-              Lieblingsspiel: favoriteLabel,
-              Unlieblingsspiel: leastLabel,
-              Feedback: feedback,
-              Verbesserungen: improve,
-              Zeitpunkt: timestamp,
-            }),
-          }
-        );
-        const data = await res.json();
-        if (!res.ok || !data.success) throw new Error("send failed");
-      } catch {
+            body,
+          });
+          data = await res.json();
+        } else {
+          const res = await fetch(
+            "https://formsubmit.co/ajax/" + encodeURIComponent(SURVEY_CONFIG.EMAIL),
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify({
+                _subject: "Neue Game-Umfrage · PU Projekt",
+                _template: "table",
+                _captcha: "false",
+                Name: name,
+                Lieblingsspiel: favoriteLabel,
+                Unlieblingsspiel: leastLabel,
+                Feedback: feedback,
+                Verbesserungen: improve,
+                Zeitpunkt: timestamp,
+              }),
+            }
+          );
+          data = await res.json();
+        }
+
+        if (data.message && String(data.message).toLowerCase().includes("activation")) {
+          form.classList.add("hidden");
+          document.getElementById("activation").classList.add("show");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
+
+        if (!isSuccess(data)) throw new Error(data.message || "send failed");
+      } catch (err) {
+        console.error(err);
+        sendError.textContent =
+          "Senden fehlgeschlagen. Probiere " +
+          (hasWeb3Key ? "später nochmal" : "einrichten.html (Web3Forms)") +
+          " oder check deine Verbindung.";
         sendError.classList.add("show");
         submitBtn.disabled = false;
         submitBtn.textContent = "Abschicken · let's go →";
