@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Feedback · PU Projekt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --card: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f4f4f8;
+      --muted: #9b9bb8;
+      --pink: #ff6bcb;
+      --cyan: #00f5d4;
+      --purple: #7b61ff;
+      --yellow: #ffe566;
+      --glow-pink: rgba(255, 107, 203, 0.35);
+      --glow-cyan: rgba(0, 245, 212, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Outfit", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 {
+      width: 420px;
+      height: 420px;
+      background: var(--purple);
+      top: -120px;
+      right: -80px;
+      opacity: 0.45;
+      animation: float 12s ease-in-out infinite;
+    }
+    .blob-2 {
+      width: 360px;
+      height: 360px;
+      background: var(--pink);
+      bottom: -100px;
+      left: -60px;
+      opacity: 0.35;
+      animation: float 14s ease-in-out infinite reverse;
+    }
+    .blob-3 {
+      width: 280px;
+      height: 280px;
+      background: var(--cyan);
+      top: 40%;
+      left: 50%;
+      opacity: 0.2;
+      animation: float 10s ease-in-out infinite 2s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(20px, -30px) scale(1.05); }
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      margin-bottom: 1rem;
+      box-shadow: 0 0 24px var(--glow-pink);
+    }
+
+    h1 {
+      font-size: clamp(1.85rem, 5vw, 2.5rem);
+      font-weight: 800;
+      line-height: 1.15;
+      background: linear-gradient(120deg, #fff 30%, var(--cyan) 70%, var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sub {
+      color: var(--muted);
+      margin-top: 0.75rem;
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      padding: 1.5rem 1.35rem;
+      margin-bottom: 1.25rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .card:focus-within {
+      border-color: rgba(0, 245, 212, 0.4);
+      box-shadow: 0 0 0 1px rgba(0, 245, 212, 0.15), 0 8px 32px var(--glow-cyan);
+    }
+
+    label.q {
+      display: block;
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .hint {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.6rem;
+    }
+
+    .game-opt {
+      position: relative;
+    }
+
+    .game-opt input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .game-opt span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 0.75rem;
+      border: 1.5px solid var(--border);
+      background: rgba(0, 0, 0, 0.25);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .game-opt span .emoji {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .game-opt input:focus-visible + span {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+
+    .game-opt input:checked + span {
+      border-color: var(--cyan);
+      background: rgba(0, 245, 212, 0.12);
+      box-shadow: 0 0 20px var(--glow-cyan);
+    }
+
+    .game-opt.negative input:checked + span {
+      border-color: var(--pink);
+      background: rgba(255, 107, 203, 0.12);
+      box-shadow: 0 0 20px var(--glow-pink);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      padding: 0.85rem 1rem;
+      border-radius: 0.75rem;
+      border: 1.5px solid var(--border);
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    textarea::placeholder {
+      color: #6b6b85;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--purple);
+    }
+
+    .name-row input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      border: 1.5px solid var(--border);
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+    }
+
+    .name-row input:focus {
+      outline: none;
+      border-color: var(--purple);
+    }
+
+    .name-row input::placeholder {
+      color: #6b6b85;
+    }
+
+    .error-msg {
+      color: #ff6b6b;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      display: none;
+    }
+
+    .error-msg.show {
+      display: block;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 1rem 1.5rem;
+      font-family: inherit;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0a0a0f;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--cyan), var(--purple), var(--pink));
+      background-size: 200% 200%;
+      animation: gradient-shift 4s ease infinite;
+      transition: transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 8px 32px rgba(123, 97, 255, 0.4);
+    }
+
+    @keyframes gradient-shift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    button[type="submit"]:hover {
+      transform: scale(1.02);
+      box-shadow: 0 12px 40px rgba(255, 107, 203, 0.45);
+    }
+
+    button[type="submit"]:active {
+      transform: scale(0.98);
+    }
+
+    button[type="submit"]:disabled {
+      opacity: 0.65;
+      cursor: wait;
+      transform: none;
+    }
+
+    .setup-banner {
+      background: rgba(255, 230, 102, 0.12);
+      border: 1px solid rgba(255, 230, 102, 0.35);
+      color: #ffe566;
+      padding: 0.85rem 1rem;
+      border-radius: 0.75rem;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.45;
+    }
+
+    .setup-banner a {
+      color: var(--cyan);
+    }
+
+    .send-error {
+      display: none;
+      text-align: center;
+      color: #ff6b6b;
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+    }
+
+    .send-error.show {
+      display: block;
+    }
+
+    /* Thank you screen */
+    .thanks {
+      display: none;
+      text-align: center;
+      padding: 3rem 1rem;
+      animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .thanks.show {
+      display: block;
+    }
+
+    @keyframes pop {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .thanks .icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .thanks h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .thanks p {
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+
+    form.hidden {
+      display: none;
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <div class="wrap">
+    <header>
+      <span class="badge">PU Projekt · Feedback</span>
+      <h1>Welches Game hat gehitet? 🎮</h1>
+      <p class="sub">Sei ehrlich — dein Feedback hilft mir, die nächsten Games besser zu machen. Dauert ~2 Min.</p>
+    </header>
+
+    <div id="setup-banner" class="setup-banner" hidden>
+      <strong>Hinweis für dich (Besitzer):</strong> Trag in <code>config.js</code> deinen
+      <a href="https://web3forms.com" target="_blank" rel="noopener">Web3Forms</a>-Key ein und
+      lade die Seite online hoch — dann kommen Antworten per E-Mail an dich.
+    </div>
+
+    <div id="thanks" class="thanks" aria-live="polite">
+      <span class="icon">✨</span>
+      <h2>Danke, Legend!</h2>
+      <p>Dein Feedback ist safe bei mir angekommen. Appreciate you fr.</p>
+    </div>
+
+    <form id="survey" novalidate>
+      <div class="card name-row">
+        <label class="q" for="name">Name (optional)</label>
+        <p class="hint">Nur wenn du willst — kann auch anonym bleiben</p>
+        <input type="text" id="name" name="name" placeholder="z.B. Alex" maxlength="80" autocomplete="name" />
+      </div>
+
+      <div class="card" id="block-fav">
+        <label class="q">Welches Spiel hat dir am meisten gefallen? 🔥</label>
+        <p class="hint">Pick one — das, wo du am längsten gehangen bist</p>
+        <div class="game-grid" id="grid-fav" role="radiogroup" aria-label="Lieblingsspiel"></div>
+        <p class="error-msg" id="err-fav">Bitte wähl ein Spiel aus</p>
+      </div>
+
+      <div class="card" id="block-least">
+        <label class="q">Welches Spiel hat dir am wenigsten gefallen? 💀</label>
+        <p class="hint">Kein Shade — hilft mir beim Verbessern</p>
+        <div class="game-grid negative" id="grid-least" role="radiogroup" aria-label="Unlieblingsspiel"></div>
+        <p class="error-msg" id="err-least">Bitte wähl auch hier ein Spiel</p>
+      </div>
+
+      <div class="card">
+        <label class="q" for="feedback">Allgemeines Feedback 💬</label>
+        <p class="hint">Was war cool? Was war mid? Alles rein damit</p>
+        <textarea id="feedback" name="feedback" placeholder="z.B. Snake war addictive, aber Flappy Bird hat mich tilted..." required></textarea>
+        <p class="error-msg" id="err-feedback">Schreib kurz was — auch ein Satz reicht</p>
+      </div>
+
+      <div class="card">
+        <label class="q" for="improve">Was könnte ich verbessern? 🛠️</label>
+        <p class="hint">Gameplay, Design, Bugs, Ideen für neue Features…</p>
+        <textarea id="improve" name="improve" placeholder="z.B. bessere Steuerung, Sound, mehr Levels, Tutorial am Anfang..." required></textarea>
+        <p class="error-msg" id="err-improve">Hier fehlt noch dein Input — ich will es wirklich wissen</p>
+      </div>
+
+      <button type="submit" id="submit-btn">Abschicken · let's go →</button>
+      <p class="send-error" id="send-error">Konnte nicht senden — check deine Internetverbindung und versuch's nochmal.</p>
+    </form>
+
+    <p class="footer-note">Made with 💜 für das PU Projekt</p>
+  </div>
+
+  <script src="config.js"></script>
+  <script>
+    const GAMES = [
+      { id: "snake", label: "Snake", emoji: "🐍" },
+      { id: "tetris", label: "Tetris", emoji: "🧱" },
+      { id: "pacman", label: "Pac-Man", emoji: "👻" },
+      { id: "flappy", label: "Flappy Bird", emoji: "🐦" },
+      { id: "hangman", label: "Hangman", emoji: "🪢" },
+      { id: "tictactoe", label: "Tic Tac Toe", emoji: "❌" },
+      { id: "rps", label: "Schere Stein Papier", emoji: "✊" },
+      { id: "dice", label: "Lucky Dice", emoji: "🎲" },
+      { id: "zahl", label: "Zahl raten", emoji: "🔢" },
+      { id: "reaction", label: "Reaction Time", emoji: "⚡" },
+    ];
+
+    function buildGrid(containerId, name, negative) {
+      const grid = document.getElementById(containerId);
+      GAMES.forEach((g) => {
+        const label = document.createElement("label");
+        label.className = "game-opt" + (negative ? " negative" : "");
+        label.innerHTML = `
+          <input type="radio" name="${name}" value="${g.id}" required />
+          <span><span class="emoji">${g.emoji}</span>${g.label}</span>
+        `;
+        grid.appendChild(label);
+      });
+    }
+
+    buildGrid("grid-fav", "favorite");
+    buildGrid("grid-least", "least", true);
+
+    const form = document.getElementById("survey");
+    const thanks = document.getElementById("thanks");
+    const submitBtn = document.getElementById("submit-btn");
+    const sendError = document.getElementById("send-error");
+
+    const keyMissing =
+      typeof SURVEY_CONFIG === "undefined" ||
+      !SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY ||
+      SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY === "HIER_DEIN_KEY_EINFÜGEN";
+
+    if (keyMissing) {
+      document.getElementById("setup-banner").hidden = false;
+    }
+
+    function showError(id, show) {
+      document.getElementById(id).classList.toggle("show", show);
+    }
+
+    function getLabel(gameId) {
+      const g = GAMES.find((x) => x.id === gameId);
+      return g ? `${g.emoji} ${g.label}` : gameId;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const fav = form.querySelector('input[name="favorite"]:checked');
+      const least = form.querySelector('input[name="least"]:checked');
+      const feedback = document.getElementById("feedback").value.trim();
+      const improve = document.getElementById("improve").value.trim();
+
+      let valid = true;
+      showError("err-fav", !fav);
+      showError("err-least", !least);
+      showError("err-feedback", !feedback);
+      showError("err-improve", !improve);
+      if (!fav || !least || !feedback || !improve) valid = false;
+
+      if (fav && least && fav.value === least.value) {
+        showError("err-least", true);
+        document.getElementById("err-least").textContent =
+          "Liebling und Unliebling können nicht dasselbe sein 😅";
+        valid = false;
+      } else {
+        document.getElementById("err-least").textContent = "Bitte wähl auch hier ein Spiel";
+      }
+
+      if (!valid) return;
+
+      if (keyMissing) {
+        alert(
+          "Die Umfrage ist noch nicht eingerichtet.\n\n" +
+            "In config.js musst du deinen Web3Forms-Key eintragen (kostenlos auf web3forms.com)."
+        );
+        return;
+      }
+
+      const name = document.getElementById("name").value.trim() || "Anonym";
+      const favoriteLabel = getLabel(fav.value);
+      const leastLabel = getLabel(least.value);
+      const timestamp = new Date().toLocaleString("de-DE");
+
+      const body = new FormData();
+      body.append("access_key", SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY);
+      body.append("subject", "Neue Game-Umfrage · PU Projekt");
+      body.append("from_name", "PU Umfrage");
+      body.append("name", name);
+      body.append("Lieblingsspiel", favoriteLabel);
+      body.append("Unlieblingsspiel", leastLabel);
+      body.append("Feedback", feedback);
+      body.append("Verbesserungen", improve);
+      body.append("Zeitpunkt", timestamp);
+      body.append(
+        "message",
+        [
+          "Neue Umfrage-Antwort",
+          "",
+          "Name: " + name,
+          "Lieblingsspiel: " + favoriteLabel,
+          "Unlieblingsspiel: " + leastLabel,
+          "",
+          "Feedback:",
+          feedback,
+          "",
+          "Verbesserungen:",
+          improve,
+          "",
+          "Gesendet: " + timestamp,
+        ].join("\n")
+      );
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Wird gesendet…";
+      sendError.classList.remove("show");
+
+      try {
+        const res = await fetch("https://api.web3forms.com/submit", {
+          method: "POST",
+          body,
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || "send failed");
+      } catch {
+        sendError.classList.add("show");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Abschicken · let's go →";
+        return;
+      }
+
+      form.classList.add("hidden");
+      thanks.classList.add("show");
+      document.getElementById("setup-banner").hidden = true;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  </script>
+</body>
+</html>
