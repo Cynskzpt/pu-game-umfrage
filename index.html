@@ -380,9 +380,8 @@
     </header>
 
     <div id="setup-banner" class="setup-banner" hidden>
-      <strong>Hinweis für dich (Besitzer):</strong> Trag in <code>config.js</code> deinen
-      <a href="https://web3forms.com" target="_blank" rel="noopener">Web3Forms</a>-Key ein und
-      lade die Seite online hoch — dann kommen Antworten per E-Mail an dich.
+      <strong>Hinweis für dich (Besitzer):</strong> Trag in <code>config.js</code> deine E-Mail ein —
+      dann kommen Antworten direkt in dein Postfach.
     </div>
 
     <div id="thanks" class="thanks" aria-live="polite">
@@ -469,12 +468,12 @@
     const submitBtn = document.getElementById("submit-btn");
     const sendError = document.getElementById("send-error");
 
-    const keyMissing =
+    const emailMissing =
       typeof SURVEY_CONFIG === "undefined" ||
-      !SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY ||
-      SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY === "HIER_DEIN_KEY_EINFÜGEN";
+      !SURVEY_CONFIG.EMAIL ||
+      SURVEY_CONFIG.EMAIL === "HIER_DEINE_EMAIL@example.com";
 
-    if (keyMissing) {
+    if (emailMissing) {
       document.getElementById("setup-banner").hidden = false;
     }
 
@@ -513,11 +512,8 @@
 
       if (!valid) return;
 
-      if (keyMissing) {
-        alert(
-          "Die Umfrage ist noch nicht eingerichtet.\n\n" +
-            "In config.js musst du deinen Web3Forms-Key eintragen (kostenlos auf web3forms.com)."
-        );
+      if (emailMissing) {
+        alert("Die Umfrage ist noch nicht eingerichtet — E-Mail fehlt in config.js.");
         return;
       }
 
@@ -526,46 +522,33 @@
       const leastLabel = getLabel(least.value);
       const timestamp = new Date().toLocaleString("de-DE");
 
-      const body = new FormData();
-      body.append("access_key", SURVEY_CONFIG.WEB3FORMS_ACCESS_KEY);
-      body.append("subject", "Neue Game-Umfrage · PU Projekt");
-      body.append("from_name", "PU Umfrage");
-      body.append("name", name);
-      body.append("Lieblingsspiel", favoriteLabel);
-      body.append("Unlieblingsspiel", leastLabel);
-      body.append("Feedback", feedback);
-      body.append("Verbesserungen", improve);
-      body.append("Zeitpunkt", timestamp);
-      body.append(
-        "message",
-        [
-          "Neue Umfrage-Antwort",
-          "",
-          "Name: " + name,
-          "Lieblingsspiel: " + favoriteLabel,
-          "Unlieblingsspiel: " + leastLabel,
-          "",
-          "Feedback:",
-          feedback,
-          "",
-          "Verbesserungen:",
-          improve,
-          "",
-          "Gesendet: " + timestamp,
-        ].join("\n")
-      );
-
       submitBtn.disabled = true;
       submitBtn.textContent = "Wird gesendet…";
       sendError.classList.remove("show");
 
       try {
-        const res = await fetch("https://api.web3forms.com/submit", {
-          method: "POST",
-          body,
-        });
+        const res = await fetch(
+          "https://formsubmit.co/ajax/" + encodeURIComponent(SURVEY_CONFIG.EMAIL),
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              _subject: "Neue Game-Umfrage · PU Projekt",
+              _template: "table",
+              Name: name,
+              Lieblingsspiel: favoriteLabel,
+              Unlieblingsspiel: leastLabel,
+              Feedback: feedback,
+              Verbesserungen: improve,
+              Zeitpunkt: timestamp,
+            }),
+          }
+        );
         const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.message || "send failed");
+        if (!res.ok || !data.success) throw new Error("send failed");
       } catch {
         sendError.classList.add("show");
         submitBtn.disabled = false;
